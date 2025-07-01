@@ -1,6 +1,7 @@
 # Blog API GemFire
 
-A drop-in replacement for [blog-api](https://github.com/categolj/blog-api) using VMware GemFire as the backend.
+A drop-in replacement for [blog-api](https://github.com/categolj/blog-api) using VMware GemFire as
+the backend.
 
 ## Prerequisites
 
@@ -9,6 +10,7 @@ A drop-in replacement for [blog-api](https://github.com/categolj/blog-api) using
 To access the Broadcom GemFire repository, add the following to your `~/.m2/settings.xml`:
 
 ```xml
+
 <settings>
   <servers>
     <server>
@@ -56,4 +58,12 @@ java -jar target/blog-api-gemfire-0.0.1-SNAPSHOT.jar \
   --gemfire.properties.ssl-keystore-password=${CERT_PASSWORD} \
   --gemfire.properties.ssl-truststore=/certs/truststore.p12 \
   --gemfire.properties.ssl-truststore-password=${CERT_PASSWORD}
+```
+
+## Running with Docker
+
+A pre-built Docker image is available:
+
+```bash
+docker run --rm --name blog-api ghcr.io/categolj/blog-api-gemfire:jvm --gemfire.locators=LOCATOR_IP:10334
 ```
