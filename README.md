@@ -67,3 +67,13 @@ A pre-built Docker image is available:
 ```bash
 docker run --rm --name blog-api ghcr.io/categolj/blog-api-gemfire:jvm --gemfire.locators=LOCATOR_IP:10334
 ```
+
+## GitHub Integration
+
+When an entry doesn't exist in GemFire, the application fetches Markdown content from GitHub. By default, it uses [`making/blog.ik.am`](https://github.com/making/blog.ik.am) repository. You can customize the GitHub source with these properties:
+
+```bash
+--blog.github.content-owner=making \
+--blog.github.content-repo=blog.ik.am \
+--blog.github.access-token=CHANGE_ME
+```
