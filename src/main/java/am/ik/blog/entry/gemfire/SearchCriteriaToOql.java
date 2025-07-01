@@ -68,7 +68,9 @@ final class SearchCriteriaToOql {
 
 	static QueryAndParams convertCategories(List<String> categories, int index) {
 		List<String> params = new ArrayList<>();
-		StringBuilder categoriesQuery = new StringBuilder();
+		StringBuilder categoriesQuery = new StringBuilder("categories.size() >= ").append(categories.size())
+			.append(" AND ");
+		categoriesQuery.append("(");
 		for (int i = 0; i < categories.size(); i++) {
 			String category = categories.get(i);
 			if (i > 0) {
@@ -77,6 +79,7 @@ final class SearchCriteriaToOql {
 			categoriesQuery.append("categories[").append(i).append("] = $").append(index + i);
 			params.add(category);
 		}
+		categoriesQuery.append(")");
 		return new QueryAndParams(categoriesQuery.toString(), params);
 	}
 

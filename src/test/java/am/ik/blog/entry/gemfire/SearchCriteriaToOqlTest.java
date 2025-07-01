@@ -83,15 +83,17 @@ class SearchCriteriaToOqlTest {
 	@Test
 	void categories() {
 		QueryAndParams queryAndParams = SearchCriteriaToOql.convertCategories(List.of("cat1", "cat2", "cat3"), 1);
+		// ensure that the categories size is more than or equal to the number of
+		// requested categories
 		assertThat(queryAndParams.query())
-			.isEqualTo("categories[0] = $1 AND categories[1] = $2 AND categories[2] = $3");
+			.isEqualTo("categories.size() >= 3 AND (categories[0] = $1 AND categories[1] = $2 AND categories[2] = $3)");
 		assertThat(queryAndParams.params()).containsExactly("cat1", "cat2", "cat3");
 	}
 
 	@Test
 	void singleCategory() {
 		QueryAndParams queryAndParams = SearchCriteriaToOql.convertCategories(List.of("cat1"), 1);
-		assertThat(queryAndParams.query()).isEqualTo("categories[0] = $1");
+		assertThat(queryAndParams.query()).isEqualTo("categories.size() >= 1 AND (categories[0] = $1)");
 		assertThat(queryAndParams.params()).containsExactly("cat1");
 	}
 
