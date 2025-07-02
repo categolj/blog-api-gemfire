@@ -23,6 +23,8 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -39,8 +41,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @RestController
 public class EntryController {
-
-	private static final String TEMP_USERNAME = "admin";
 
 	private final AuthorizedEntryService entryService;
 
@@ -95,9 +95,10 @@ public class EntryController {
 
 	@PostMapping(path = { "/entries", "/tenants/{tenantId}/entries" }, consumes = MediaType.TEXT_MARKDOWN_VALUE)
 	public ResponseEntity<Entry> postEntryFromMarkdown(@PathVariable(required = false) String tenantId,
-			@RequestBody String markdown, UriComponentsBuilder builder) {
+			@RequestBody String markdown, @AuthenticationPrincipal UserDetails userDetails,
+			UriComponentsBuilder builder) {
 		Instant now = this.clock.instant();
-		Author created = AuthorBuilder.author().name(TEMP_USERNAME).date(now).build();
+		Author created = AuthorBuilder.author().name(userDetails.getUsername()).date(now).build();
 		Long entryId = this.entryService.nextId(tenantId);
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		Entry entry = this.entryParser.fromMarkdown(entryKey, markdown, created, created).build();
@@ -112,10 +113,11 @@ public class EntryController {
 	@PutMapping(path = { "/entries/{entryId:\\d+}", "/tenants/{tenantId}/entries/{entryId:\\d+}" },
 			consumes = MediaType.TEXT_MARKDOWN_VALUE)
 	public ResponseEntity<Entry> putEntryFromMarkdown(@PathVariable Long entryId,
-			@PathVariable(required = false) String tenantId, @RequestBody String markdown) {
+			@PathVariable(required = false) String tenantId, @RequestBody String markdown,
+			@AuthenticationPrincipal UserDetails userDetails) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		Instant now = this.clock.instant();
-		Author updated = AuthorBuilder.author().name(TEMP_USERNAME).date(now).build();
+		Author updated = AuthorBuilder.author().name(userDetails.getUsername()).date(now).build();
 		Author created = this.entryService.findById(tenantId, entryKey).map(Entry::created).orElse(updated);
 		Entry entry = this.entryParser.fromMarkdown(entryKey, markdown, created, updated).build();
 		Entry saved = this.entryService.save(tenantId, entry);

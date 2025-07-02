@@ -727,6 +727,8 @@ class EntryControllerTest {
 		assertThat(frontMatter.title()).isEqualToIgnoringNewLines("Sample Entry Title");
 		assertThat(frontMatter.categories()).extracting("name").containsExactly("c1", "c2", "c3");
 		assertThat(frontMatter.tags()).extracting("name").containsExactly("t1", "t2", "t3");
+		assertThat(entry.created().name()).isEqualTo(username);
+		assertThat(entry.updated().name()).isEqualTo(username);
 		assertThat(this.entryRegion.get(new EntryKey(nextId, tenantId).toString()))
 			.isEqualTo(EntryEntity.fromModel(entry));
 	}
@@ -766,6 +768,8 @@ class EntryControllerTest {
 		assertThat(frontMatter.title()).isEqualToIgnoringNewLines("Updated Entry Title");
 		assertThat(frontMatter.categories()).extracting("name").containsExactly("updated1", "updated2");
 		assertThat(frontMatter.tags()).extracting("name").containsExactly("tag1", "tag2");
+		assertThat(entry.created().name()).isEqualTo(entry1.created().name());
+		assertThat(entry.updated().name()).isEqualTo(username);
 		assertThat(this.entryRegion.get(entry1.entryKey().toString())).isEqualTo(EntryEntity.fromModel(entry));
 	}
 
