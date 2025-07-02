@@ -17,6 +17,7 @@ import am.ik.blog.entry.gemfire.EntryEntity;
 import am.ik.blog.mockserver.MockServer;
 import am.ik.blog.mockserver.MockServer.Response;
 import am.ik.pagination.CursorPage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vmware.gemfire.testcontainers.GemFireCluster;
 import java.net.URI;
 import java.time.Instant;
@@ -44,7 +45,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import static am.ik.blog.entry.MockData.ENTRY1;
 import static am.ik.blog.entry.MockData.ENTRY10;
@@ -894,7 +894,7 @@ class EntryControllerTest {
 		assertThat(response1.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(response1.getBody()).isEqualTo(entry1);
 
-		// Update the entry through repository (simulating server-side update)
+		// Update the entry through gfsh (simulating server-side update)
 		Entry updatedEntry = EntryBuilder.from(entry1)
 			.content("Updated content from another client")
 			.frontMatter(FrontMatterBuilder.from(entry1.frontMatter()).title("Updated Title").build())
