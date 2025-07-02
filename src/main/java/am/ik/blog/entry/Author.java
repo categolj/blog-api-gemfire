@@ -3,6 +3,7 @@ package am.ik.blog.entry;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.annotation.Nullable;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import org.jilt.Builder;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
@@ -14,7 +15,7 @@ public record Author(String name, @Nullable Instant date) {
 		if (this.date == null) {
 			return "";
 		}
-		return RFC_1123_DATE_TIME.format(this.date);
+		return RFC_1123_DATE_TIME.format(this.date.atOffset(ZoneOffset.UTC));
 	}
 
 	public Author withDate(Instant date) {

@@ -437,6 +437,45 @@ class EntryControllerTest {
 	}
 
 	@ParameterizedTest
+	@CsvSource({ "/entries/{entryId},,", "/entries/{entryId}.md,,", "/tenants/t1/entries/{entryId},admin,changeme",
+			"/tenants/t1/entries/{entryId}.md,admin,changeme" })
+	void getEntryNotModified(String path, String username, String password) {
+		String tenantId = path.startsWith("/tenants/") ? path.split("/")[2] : null;
+		prepareMockData(tenantId);
+		Entry entry1 = withTenantId(ENTRY1, tenantId);
+		Instant lastModified = entry1.updated().date();
+		assertThat(lastModified).isNotNull();
+		var response = this.restClient.get()
+			.uri(path, entry1.entryId())
+			.header(HttpHeaders.IF_MODIFIED_SINCE,
+					entry1.updated().withDate(lastModified.plusSeconds(100)).rfc1123DateTime())
+			.headers(configureAuth(username, password))
+			.retrieve()
+			.toEntity(Entry.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
+		assertThat(response.getBody()).isNull();
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "/entries/{entryId},,", "/entries/{entryId}.md,,", "/tenants/t1/entries/{entryId},admin,changeme",
+			"/tenants/t1/entries/{entryId}.md,admin,changeme" })
+	void getEntryModified(String path, String username, String password) {
+		String tenantId = path.startsWith("/tenants/") ? path.split("/")[2] : null;
+		prepareMockData(tenantId);
+		Entry entry1 = withTenantId(ENTRY1, tenantId);
+		Instant lastModified = entry1.updated().date();
+		assertThat(lastModified).isNotNull();
+		var response = this.restClient.get()
+			.uri(path, entry1.entryId())
+			.header(HttpHeaders.IF_MODIFIED_SINCE,
+					entry1.updated().withDate(lastModified.minusSeconds(100)).rfc1123DateTime())
+			.headers(configureAuth(username, password))
+			.retrieve()
+			.toBodilessEntity();
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
+	@ParameterizedTest
 	@CsvSource({ "/entries/{entryId},,", "/tenants/t1/entries/{entryId},admin,changeme" })
 	void getEntryNotFound(String path, String username, String password) {
 		String tenantId = path.startsWith("/tenants/") ? path.split("/")[2] : null;

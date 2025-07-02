@@ -12,10 +12,14 @@ import am.ik.blog.entry.TagAndCount;
 import am.ik.pagination.CursorPage;
 import am.ik.pagination.CursorPageRequest;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -28,10 +32,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.OK;
 
 @RestController
 public class EntryController {
@@ -64,21 +68,29 @@ public class EntryController {
 	}
 
 	@GetMapping(path = { "/entries/{entryId:\\d+}", "/tenants/{tenantId}/entries/{entryId:\\d+}" })
-	public ResponseEntity<?> getEntry(@PathVariable Long entryId, @PathVariable(required = false) String tenantId) {
+	public ResponseEntity<?> getEntry(@PathVariable Long entryId, @PathVariable(required = false) String tenantId,
+			WebRequest webRequest) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
-		return this.entryService.findById(tenantId, entryKey)
-			.<ResponseEntity<?>>map(ResponseEntity::ok)
-			.orElseGet(() -> entryNotFound(entryKey));
+		Optional<Entry> entry = this.entryService.findById(tenantId, entryKey);
+		if (entry.isPresent()) {
+			return checkNotModified(entry.get(), webRequest, Function.identity(), MediaType.APPLICATION_JSON);
+		}
+		else {
+			return entryNotFound(entryKey);
+		}
 	}
 
 	@GetMapping(path = { "/entries/{entryId:\\d+}.md", "/tenants/{tenantId}/entries/{entryId:\\d+}.md" })
 	public ResponseEntity<?> getEntryAsMarkdown(@PathVariable Long entryId,
-			@PathVariable(required = false) String tenantId) {
+			@PathVariable(required = false) String tenantId, WebRequest webRequest) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
-		return this.entryService.findById(tenantId, entryKey)
-			.<ResponseEntity<?>>map(
-					entry -> ResponseEntity.status(OK).contentType(MediaType.TEXT_MARKDOWN).body(entry.toMarkdown()))
-			.orElseGet(() -> entryNotFound(entryKey));
+		Optional<Entry> entry = this.entryService.findById(tenantId, entryKey);
+		if (entry.isPresent()) {
+			return checkNotModified(entry.get(), webRequest, Entry::toMarkdown, MediaType.TEXT_MARKDOWN);
+		}
+		else {
+			return entryNotFound(entryKey);
+		}
 	}
 
 	@PostMapping(path = { "/entries", "/tenants/{tenantId}/entries" }, consumes = MediaType.TEXT_MARKDOWN_VALUE)
@@ -132,6 +144,21 @@ public class EntryController {
 	@GetMapping(path = { "/tags", "/tenants/{tenantId}/tags" })
 	public List<TagAndCount> getTags(@PathVariable(required = false) String tenantId) {
 		return this.entryService.findAllTags(tenantId);
+	}
+
+	private <T> ResponseEntity<T> checkNotModified(Entry entry, WebRequest webRequest, Function<Entry, T> mapper,
+			MediaType mediaType) {
+		Instant updated = entry.updated().date();
+		if (updated != null) {
+			long lastModified = updated.toEpochMilli();
+			if (webRequest.checkNotModified(lastModified)) {
+				return null;
+			}
+		}
+		return ResponseEntity.ok()
+			.cacheControl(CacheControl.maxAge(Duration.ofHours(1)))
+			.contentType(mediaType)
+			.body(mapper.apply(entry));
 	}
 
 	private ResponseEntity<?> entryNotFound(EntryKey entryKey) {
