@@ -17,10 +17,12 @@ import am.ik.blog.entry.gemfire.EntryEntity;
 import am.ik.blog.mockserver.MockServer;
 import am.ik.blog.mockserver.MockServer.Response;
 import am.ik.pagination.CursorPage;
+import com.vmware.gemfire.testcontainers.GemFireCluster;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import org.apache.geode.cache.Region;
 import org.junit.jupiter.api.AfterEach;
@@ -42,6 +44,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import static am.ik.blog.entry.MockData.ENTRY1;
 import static am.ik.blog.entry.MockData.ENTRY10;
@@ -78,6 +81,9 @@ class EntryControllerTest {
 
 	@LocalServerPort
 	int port;
+
+	@Autowired
+	GemFireCluster gemFireCluster;
 
 	@BeforeEach
 	void setup(@Autowired RestClient.Builder restClientBuilder) {
@@ -870,6 +876,48 @@ class EntryControllerTest {
 			.retrieve()
 			.toEntity(ProblemDetail.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "/entries/{entryId},,", "/tenants/t1/entries/{entryId},admin,changeme" })
+	void serverSideChangesReflectedInClientCache(String path, String username, String password) throws Exception {
+		String tenantId = path.startsWith("/tenants/") ? path.split("/")[2] : null;
+		prepareMockData(tenantId);
+		Entry entry1 = withTenantId(ENTRY1, tenantId);
+
+		// First request - entry is loaded into cache
+		var response1 = this.restClient.get()
+			.uri(path, entry1.entryId())
+			.headers(configureAuth(username, password))
+			.retrieve()
+			.toEntity(Entry.class);
+		assertThat(response1.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response1.getBody()).isEqualTo(entry1);
+
+		// Update the entry through repository (simulating server-side update)
+		Entry updatedEntry = EntryBuilder.from(entry1)
+			.content("Updated content from another client")
+			.frontMatter(FrontMatterBuilder.from(entry1.frontMatter()).title("Updated Title").build())
+			.updated(entry1.updated().withDate(Objects.requireNonNull(entry1.updated().date()).plusSeconds(200)))
+			.build();
+		String updateJson = new ObjectMapper().writeValueAsString(EntryEntity.fromModel(updatedEntry));
+		this.gemFireCluster.gfsh(false, "put --region=Entry --key='%s' --value='%s' --value-class=%s"
+			.formatted(updatedEntry.entryKey().toString(), updateJson, EntryEntity.class.getName()));
+
+		// Verify the cache should have been updated via subscription
+		var response2 = this.restClient.get()
+			.uri(path, entry1.entryId())
+			.header(HttpHeaders.IF_MODIFIED_SINCE, entry1.updated().rfc1123DateTime())
+			.headers(configureAuth(username, password))
+			.retrieve()
+			.toEntity(Entry.class);
+		assertThat(response2.getStatusCode()).isEqualTo(HttpStatus.OK);
+		Entry updatedResponseBody = response2.getBody();
+		assertThat(updatedResponseBody).isNotNull();
+		assertThat(updatedResponseBody.content()).isEqualTo("Updated content from another client");
+		assertThat(updatedResponseBody.frontMatter()).isNotNull();
+		assertThat(updatedResponseBody.frontMatter().title()).isEqualTo("Updated Title");
+		assertThat(updatedResponseBody.updated().date()).isEqualTo(updatedEntry.updated().date());
 	}
 
 }

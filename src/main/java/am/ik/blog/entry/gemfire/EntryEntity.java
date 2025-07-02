@@ -9,15 +9,16 @@ import am.ik.blog.entry.EntryKey;
 import am.ik.blog.entry.FrontMatter;
 import am.ik.blog.entry.FrontMatterBuilder;
 import am.ik.blog.entry.Tag;
-import am.ik.csv.Csv;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jilt.Builder;
 
@@ -51,9 +52,7 @@ public class EntryEntity {
 	public EntryEntity() {
 	}
 
-	private static final Csv categoriesCsv = Csv.builder().delimiter("|").build();
-
-	private static final Csv tagsCsv = Csv.builder().delimiter("|").build();
+	private static final String delimiter = "|";
 
 	public static EntryEntity fromModel(Entry entry) {
 		FrontMatter frontMatter = entry.frontMatter();
@@ -62,12 +61,12 @@ public class EntryEntity {
 				// toList() throws `class java.util.ImmutableCollections$ListN are not
 				// compatible with non-java PDX.`
 				frontMatter.categories().stream().map(Category::name).collect(Collectors.toList()),
-				categoriesCsv.joinLine(frontMatter.categories().stream().map(Category::name).toList()),
+				String.join(delimiter, frontMatter.categories().stream().map(Category::name).toList()),
 				frontMatter.tags().stream().map(Tag::name).collect(Collectors.toCollection(LinkedHashSet::new)),
 				frontMatter.tags()
 					.stream()
 					.filter(tag -> tag.version() != null)
-					.map(tag -> tagsCsv.joinLine(tag.name(), tag.version()))
+					.map(tag -> String.join(delimiter, tag.name(), tag.version()))
 					.collect(Collectors.toCollection(LinkedHashSet::new)),
 				entry.content(), created.name(), toDate(created), entry.updated().name(), toDate(entry.updated()),
 				entry.entryKey().tenantId());
@@ -87,7 +86,7 @@ public class EntryEntity {
 	public Entry toModel() {
 		List<Tag> mergedTags = new ArrayList<>();
 		Map<String, Tag> tagVersions = tagWithVersions.stream().map(tag -> {
-			List<String> strings = tagsCsv.splitLine(tag);
+			List<String> strings = Arrays.asList(tag.split(Pattern.quote(delimiter)));
 			if (strings.size() != 2) {
 				throw new IllegalStateException("Invalid tag format: " + tag);
 			}
