@@ -41,7 +41,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers(disabledWithoutDocker = true)
 @Import({ TestcontainersConfiguration.class, MockConfig.class })
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+		properties = { "blog.tenant.users[0]=blog-ui|{noop}empty|_=GET,LIST",
+				"blog.tenant.users[1]=readonly|{noop}secret|t1=GET,LIST",
+				"blog.tenant.users[2]=editor|{noop}password|_=EDIT,DELETE|t1=EDIT,DELETE,GET" })
 class WebhookControllerTest {
 
 	RestClient restClient;
@@ -62,7 +65,7 @@ class WebhookControllerTest {
 	@BeforeEach
 	void setup(@Autowired RestClient.Builder restClientBuilder) {
 		this.restClient = restClientBuilder.baseUrl("http://localhost:" + port)
-			.defaultStatusHandler(__ -> true, (req, res) -> {
+			.defaultStatusHandler(statusCode -> statusCode == HttpStatus.BAD_REQUEST, (req, res) -> {
 			})
 			.build();
 		this.mockServer.reset()

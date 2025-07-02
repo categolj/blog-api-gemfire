@@ -2,11 +2,11 @@ package am.ik.blog.entry.web;
 
 import am.ik.blog.entry.Author;
 import am.ik.blog.entry.AuthorBuilder;
+import am.ik.blog.entry.AuthorizedEntryService;
 import am.ik.blog.entry.Category;
 import am.ik.blog.entry.Entry;
 import am.ik.blog.entry.EntryKey;
 import am.ik.blog.entry.EntryParser;
-import am.ik.blog.entry.EntryRepository;
 import am.ik.blog.entry.SearchCriteria;
 import am.ik.blog.entry.TagAndCount;
 import am.ik.pagination.CursorPage;
@@ -38,14 +38,14 @@ public class EntryController {
 
 	private static final String TEMP_USERNAME = "admin";
 
-	private final EntryRepository entryRepository;
+	private final AuthorizedEntryService entryService;
 
 	private final EntryParser entryParser;
 
 	private final Clock clock;
 
-	public EntryController(EntryRepository entryRepository, EntryParser entryParser, Clock clock) {
-		this.entryRepository = entryRepository;
+	public EntryController(AuthorizedEntryService entryService, EntryParser entryParser, Clock clock) {
+		this.entryService = entryService;
 		this.entryParser = entryParser;
 		this.clock = clock;
 	}
@@ -53,20 +53,20 @@ public class EntryController {
 	@GetMapping(path = { "/entries", "/tenants/{tenantId}/entries" })
 	public CursorPage<Entry, Instant> getEntries(@PathVariable(required = false) String tenantId,
 			@ModelAttribute SearchCriteria criteria, CursorPageRequest<Instant> pageRequest) {
-		return this.entryRepository.findOrderByUpdated(tenantId, criteria, pageRequest);
+		return this.entryService.findOrderByUpdated(tenantId, criteria, pageRequest);
 	}
 
 	@GetMapping(path = { "/entries", "/tenants/{tenantId}/entries" }, params = "entryIds")
 	public List<Entry> getEntriesWithIds(@PathVariable(required = false) String tenantId,
 			@RequestParam List<Long> entryIds) {
 		List<EntryKey> entryKeys = entryIds.stream().map(entryId -> new EntryKey(entryId, tenantId)).toList();
-		return this.entryRepository.findAll(entryKeys);
+		return this.entryService.findAll(tenantId, entryKeys);
 	}
 
 	@GetMapping(path = { "/entries/{entryId}", "/tenants/{tenantId}/entries/{entryId}" })
 	public ResponseEntity<?> getEntry(@PathVariable Long entryId, @PathVariable(required = false) String tenantId) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
-		return this.entryRepository.findById(entryKey)
+		return this.entryService.findById(tenantId, entryKey)
 			.<ResponseEntity<?>>map(ResponseEntity::ok)
 			.orElseGet(() -> ResponseEntity.status(NOT_FOUND)
 				.body(ProblemDetail.forStatusAndDetail(NOT_FOUND, "Entry not found: " + entryKey)));
@@ -76,7 +76,7 @@ public class EntryController {
 	public ResponseEntity<?> getEntryAsMarkdown(@PathVariable Long entryId,
 			@PathVariable(required = false) String tenantId) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
-		return this.entryRepository.findById(entryKey)
+		return this.entryService.findById(tenantId, entryKey)
 			.<ResponseEntity<?>>map(
 					entry -> ResponseEntity.status(OK).contentType(MediaType.TEXT_MARKDOWN).body(entry.toMarkdown()))
 			.orElseGet(() -> ResponseEntity.status(NOT_FOUND)
@@ -88,10 +88,10 @@ public class EntryController {
 			@RequestBody String markdown, UriComponentsBuilder builder) {
 		Instant now = this.clock.instant();
 		Author created = AuthorBuilder.author().name(TEMP_USERNAME).date(now).build();
-		Long entryId = this.entryRepository.nextId(tenantId);
+		Long entryId = this.entryService.nextId(tenantId);
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		Entry entry = this.entryParser.fromMarkdown(entryKey, markdown, created, created).build();
-		Entry saved = this.entryRepository.save(entry);
+		Entry saved = this.entryService.save(tenantId, entry);
 		String path = tenantId == null ? "/entries/{entryId}" : "/tenants/{tenantId}/entries/{entryId}";
 		return ResponseEntity
 			.created(builder.path(path)
@@ -106,9 +106,9 @@ public class EntryController {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		Instant now = this.clock.instant();
 		Author updated = AuthorBuilder.author().name(TEMP_USERNAME).date(now).build();
-		Author created = this.entryRepository.findById(entryKey).map(Entry::created).orElse(updated);
+		Author created = this.entryService.findById(tenantId, entryKey).map(Entry::created).orElse(updated);
 		Entry entry = this.entryParser.fromMarkdown(entryKey, markdown, created, updated).build();
-		Entry saved = this.entryRepository.save(entry);
+		Entry saved = this.entryService.save(tenantId, entry);
 		return ResponseEntity.ok(saved);
 	}
 
@@ -116,24 +116,24 @@ public class EntryController {
 	public ResponseEntity<Void> deleteEntry(@PathVariable Long entryId,
 			@PathVariable(required = false) String tenantId) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
-		this.entryRepository.deleteById(entryKey);
+		this.entryService.deleteById(tenantId, entryKey);
 		return ResponseEntity.noContent().build();
 	}
 
 	@DeleteMapping(path = { "/entries", "/tenants/{tenantId}/entries" })
 	public ResponseEntity<Void> deleteAll(@PathVariable(required = false) String tenantId) {
-		this.entryRepository.deleteAll();
+		this.entryService.deleteAll(tenantId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping(path = { "/categories", "/tenants/{tenantId}/categories" })
 	public List<List<Category>> getCategories(@PathVariable(required = false) String tenantId) {
-		return this.entryRepository.findAllCategories(tenantId);
+		return this.entryService.findAllCategories(tenantId);
 	}
 
 	@GetMapping(path = { "/tags", "/tenants/{tenantId}/tags" })
 	public List<TagAndCount> getTags(@PathVariable(required = false) String tenantId) {
-		return this.entryRepository.findAllTags(tenantId);
+		return this.entryService.findAllTags(tenantId);
 	}
 
 }
