@@ -63,24 +63,22 @@ public class EntryController {
 		return this.entryService.findAll(tenantId, entryKeys);
 	}
 
-	@GetMapping(path = { "/entries/{entryId}", "/tenants/{tenantId}/entries/{entryId}" })
+	@GetMapping(path = { "/entries/{entryId:\\d+}", "/tenants/{tenantId}/entries/{entryId:\\d+}" })
 	public ResponseEntity<?> getEntry(@PathVariable Long entryId, @PathVariable(required = false) String tenantId) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		return this.entryService.findById(tenantId, entryKey)
 			.<ResponseEntity<?>>map(ResponseEntity::ok)
-			.orElseGet(() -> ResponseEntity.status(NOT_FOUND)
-				.body(ProblemDetail.forStatusAndDetail(NOT_FOUND, "Entry not found: " + entryKey)));
+			.orElseGet(() -> entryNotFound(entryKey));
 	}
 
-	@GetMapping(path = { "/entries/{entryId}.md", "/tenants/{tenantId}/entries/{entryId}.md" })
+	@GetMapping(path = { "/entries/{entryId:\\d+}.md", "/tenants/{tenantId}/entries/{entryId:\\d+}.md" })
 	public ResponseEntity<?> getEntryAsMarkdown(@PathVariable Long entryId,
 			@PathVariable(required = false) String tenantId) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		return this.entryService.findById(tenantId, entryKey)
 			.<ResponseEntity<?>>map(
 					entry -> ResponseEntity.status(OK).contentType(MediaType.TEXT_MARKDOWN).body(entry.toMarkdown()))
-			.orElseGet(() -> ResponseEntity.status(NOT_FOUND)
-				.body(ProblemDetail.forStatusAndDetail(NOT_FOUND, "Entry not found: " + entryKey)));
+			.orElseGet(() -> entryNotFound(entryKey));
 	}
 
 	@PostMapping(path = { "/entries", "/tenants/{tenantId}/entries" }, consumes = MediaType.TEXT_MARKDOWN_VALUE)
@@ -92,14 +90,14 @@ public class EntryController {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
 		Entry entry = this.entryParser.fromMarkdown(entryKey, markdown, created, created).build();
 		Entry saved = this.entryService.save(tenantId, entry);
-		String path = tenantId == null ? "/entries/{entryId}" : "/tenants/{tenantId}/entries/{entryId}";
+		String path = tenantId == null ? "/entries/{entryId:\\d+}" : "/tenants/{tenantId}/entries/{entryId:\\d+}";
 		return ResponseEntity
 			.created(builder.path(path)
 				.build(Map.of("entryId", entryId, "tenantId", Objects.requireNonNullElse(tenantId, ""))))
 			.body(saved);
 	}
 
-	@PutMapping(path = { "/entries/{entryId}", "/tenants/{tenantId}/entries/{entryId}" },
+	@PutMapping(path = { "/entries/{entryId:\\d+}", "/tenants/{tenantId}/entries/{entryId:\\d+}" },
 			consumes = MediaType.TEXT_MARKDOWN_VALUE)
 	public ResponseEntity<Entry> putEntryFromMarkdown(@PathVariable Long entryId,
 			@PathVariable(required = false) String tenantId, @RequestBody String markdown) {
@@ -112,7 +110,7 @@ public class EntryController {
 		return ResponseEntity.ok(saved);
 	}
 
-	@DeleteMapping(path = { "/entries/{entryId}", "/tenants/{tenantId}/entries/{entryId}" })
+	@DeleteMapping(path = { "/entries/{entryId:\\d+}", "/tenants/{tenantId}/entries/{entryId:\\d+}" })
 	public ResponseEntity<Void> deleteEntry(@PathVariable Long entryId,
 			@PathVariable(required = false) String tenantId) {
 		EntryKey entryKey = new EntryKey(entryId, tenantId);
@@ -134,6 +132,11 @@ public class EntryController {
 	@GetMapping(path = { "/tags", "/tenants/{tenantId}/tags" })
 	public List<TagAndCount> getTags(@PathVariable(required = false) String tenantId) {
 		return this.entryService.findAllTags(tenantId);
+	}
+
+	private ResponseEntity<?> entryNotFound(EntryKey entryKey) {
+		return ResponseEntity.status(NOT_FOUND)
+			.body(ProblemDetail.forStatusAndDetail(NOT_FOUND, "Entry not found: " + entryKey));
 	}
 
 }
