@@ -11,6 +11,7 @@ import am.ik.blog.entry.Tag;
 import am.ik.blog.entry.TagAndCount;
 import am.ik.pagination.CursorPage;
 import am.ik.pagination.CursorPageRequest;
+import io.micrometer.observation.annotation.Observed;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 @Repository
+@Observed
 public class EntryGemfireRepository implements EntryRepository {
 
 	private final Region<String, EntryEntity> entryRegion;

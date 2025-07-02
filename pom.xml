@@ -39,6 +39,10 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
     <dependency>
@@ -277,6 +281,7 @@
               <BP_OCI_SOURCE>https://github.com/${env.GITHUB_REPOSITORY}</BP_OCI_SOURCE>
               <BP_OCI_REVISION>${env.GITHUB_SHA}</BP_OCI_REVISION>
               <BP_JVM_CDS_ENABLED>true</BP_JVM_CDS_ENABLED>
+              <CDS_TRAINING_JAVA_TOOL_OPTIONS>-Dgemfire.locators=localhost:10334</CDS_TRAINING_JAVA_TOOL_OPTIONS>
             </env>
           </image>
         </configuration>
