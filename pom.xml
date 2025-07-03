@@ -68,6 +68,11 @@
       <artifactId>opentelemetry-exporter-sender-jdk</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.opentelemetry.contrib</groupId>
+      <artifactId>opentelemetry-samplers</artifactId>
+      <version>1.46.0-alpha</version>
+    </dependency>
+    <dependency>
       <groupId>com.vmware.gemfire</groupId>
       <artifactId>gemfire-core</artifactId>
       <version>${gemfire.version}</version>
