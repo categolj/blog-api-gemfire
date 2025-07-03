@@ -40,7 +40,7 @@ class GemfireConfig {
 		Region<String, EntryEntity> region = clientCache
 			.<String, EntryEntity>createClientRegionFactory(ClientRegionShortcut.CACHING_PROXY)
 			.create("Entry");
-		region.registerInterestForAllKeys(InterestResultPolicy.NONE);
+		region.registerInterestForAllKeys(InterestResultPolicy.KEYS_VALUES);
 		return region;
 	}
 
