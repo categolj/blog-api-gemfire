@@ -1,2 +1,2 @@
-image: ghcr.io/categolj/blog-api-gemfire@sha256:298c188672793ae27e41df15cf7e8433f88afb415ac3e29810a56a7ffa98c2c9
-git_revision: d286f233825e9fdd9346422f16937e0108cf062a
+image: ghcr.io/categolj/blog-api-gemfire@sha256:d9db5c5517fd5d3ea9a766323a6f7c096711b30b6404ad32ec47b26f13d8752d
+git_revision: b8a9c6dec55abd2e32f879b0730ff2070d524d39
