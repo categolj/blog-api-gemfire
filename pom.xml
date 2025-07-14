@@ -285,6 +285,7 @@
             <env>
               <BP_OCI_SOURCE>https://github.com/${env.GITHUB_REPOSITORY}</BP_OCI_SOURCE>
               <BP_OCI_REVISION>${env.GITHUB_SHA}</BP_OCI_REVISION>
+              <BP_JATTACH_ENABLED>true</BP_JATTACH_ENABLED>
             </env>
           </image>
         </configuration>
